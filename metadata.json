@@ -1,0 +1,6 @@
+{
+  "name": "BARBER IA - Estilo, Tecnología y Precisión",
+  "description": "Plataforma inteligente para barbería moderna con reconocimiento facial con IA, agendamiento automático en tiempo real, catálogo de estilos personalizado, pasarela de pagos y paneles para clientes, barberos y administradores.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
