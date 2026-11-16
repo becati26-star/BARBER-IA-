@@ -116,9 +116,9 @@ export const PackagesSection: React.FC<PackagesSectionProps> = ({
                 {/* Price Display */}
                 <div className="my-4 pb-4 border-b border-slate-800/80 flex items-baseline space-x-2">
                   <span className="text-3xl font-black text-white font-tech">
-                    ${pkg.price}
+                    {pkg.price} <span className="text-cyan-400 text-xl">Bs</span>
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">USD / Efectivo o Tarjeta</span>
+                  <span className="text-xs text-slate-400 font-mono">Bolivianos / QR o Tarjeta</span>
                 </div>
 
                 {/* Features list */}

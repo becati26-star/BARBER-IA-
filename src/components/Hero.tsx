@@ -1,5 +1,5 @@
 import React from 'react';
-import { Camera, Calendar, ShieldCheck, Sparkles, CheckCircle, ArrowRight, Zap, Cpu } from 'lucide-react';
+import { Camera, Calendar, Sparkles, CheckCircle, ArrowRight, Cpu, ShoppingBag } from 'lucide-react';
 
 interface HeroProps {
   onOpenFaceScanner: (mode: 'analysis' | 'auth') => void;
@@ -10,8 +10,13 @@ interface HeroProps {
 export const Hero: React.FC<HeroProps> = ({
   onOpenFaceScanner,
   onOpenBooking,
-  onOpenAuth,
 }) => {
+  const scrollToProducts = () => {
+    const el = document.getElementById('productos');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
   return (
     <div className="relative overflow-hidden pt-8 pb-16 lg:pt-14 lg:pb-24">
       {/* Background Cyber Glow & Grid Lines */}
@@ -82,7 +87,7 @@ export const Hero: React.FC<HeroProps> = ({
             </div>
 
             {/* Primary Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center lg:justify-start gap-3 pt-4">
               <button
                 onClick={() => onOpenFaceScanner('analysis')}
                 className="w-full sm:w-auto flex items-center justify-center space-x-3 px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-600 hover:from-cyan-300 hover:to-blue-500 text-slate-950 font-black text-sm uppercase tracking-wider transition-all shadow-[0_0_30px_rgba(0,240,255,0.4)] active:scale-95 group"
@@ -94,10 +99,18 @@ export const Hero: React.FC<HeroProps> = ({
 
               <button
                 onClick={onOpenBooking}
-                className="w-full sm:w-auto flex items-center justify-center space-x-2.5 px-6 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 border-2 border-cyan-500/40 hover:border-cyan-400 text-cyan-300 font-bold text-sm tracking-wide transition-all shadow-lg active:scale-95"
+                className="w-full sm:w-auto flex items-center justify-center space-x-2.5 px-5 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 border-2 border-cyan-500/40 hover:border-cyan-400 text-cyan-300 font-bold text-sm tracking-wide transition-all shadow-lg active:scale-95"
               >
                 <Calendar className="w-5 h-5 text-cyan-400" />
-                <span>Agendar Cita en Línea</span>
+                <span>Agendar Cita</span>
+              </button>
+
+              <button
+                onClick={scrollToProducts}
+                className="w-full sm:w-auto flex items-center justify-center space-x-2.5 px-5 py-4 rounded-xl bg-slate-950 hover:bg-slate-900 border-2 border-emerald-500/50 hover:border-emerald-400 text-emerald-300 font-bold text-sm tracking-wide transition-all shadow-lg active:scale-95"
+              >
+                <ShoppingBag className="w-5 h-5 text-emerald-400" />
+                <span>Tienda Productos (Bs)</span>
               </button>
             </div>
 

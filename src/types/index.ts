@@ -83,7 +83,7 @@ export interface Appointment {
   time: string; // HH:mm
   status: AppointmentStatus;
   paymentStatus: 'pending' | 'paid' | 'refunded';
-  paymentMethod?: 'credit_card' | 'apple_pay' | 'google_pay' | 'crypto' | 'cash';
+  paymentMethod?: 'qr_simple' | 'credit_card' | 'apple_pay' | 'google_pay' | 'crypto' | 'cash';
   notes?: string;
   aiSuggestedCut?: string;
   createdAt: string;
@@ -100,18 +100,50 @@ export interface CutStyleItem {
   estimatedTime: string;
   popularWithFaceShapes: string[];
   trendingScore: number;
+  clipperGuards: string;
+  hairTypes: string[];
+  maintenanceCycle: string;
+  stylingGuide: string;
+  recommendedProducts: string[];
+}
+
+export interface FaceBoxCoordinates {
+  xCenterPct: number;   // 0-100 horizontal center of the face
+  yHairTopPct: number;  // 0-100 top of hair/crown
+  yEyebrowsPct: number; // 0-100 eyebrow line / forehead bottom
+  yChinPct: number;     // 0-100 bottom of chin
+  faceWidthPct: number; // 0-100 face width at cheekbones relative to image width
+  headTiltDeg?: number; // -25 to +25 degrees head roll angle
 }
 
 export interface AIAnalysisResult {
+  faceDetected?: boolean;
+  faceDetectionReason?: string;
+  faceBox?: FaceBoxCoordinates;
   faceShape: string;
   faceShapeSpanish: string;
   jawlineDescription: string;
   symmetryScore: number;
+  faceMetrics?: {
+    foreheadWidth: string;
+    cheekboneWidth: string;
+    jawlineAngle: string;
+    faceRatio: string;
+  };
+  hairAnalysis?: {
+    texture: string;
+    density: string;
+    recommendedVolume: string;
+  };
   recommendedCuts: {
     styleName: string;
     matchScore: number;
     reason: string;
     recommendedLength: string;
+    clipperGuards?: string;
+    stylingTime?: string;
+    maintenanceCycle?: string;
+    visualPreset?: 'fade-textured' | 'pompadour' | 'buzz-laser' | 'mullet' | 'crop-top' | 'slick-back';
   }[];
   recommendedColor: {
     toneName: string;
@@ -122,6 +154,7 @@ export interface AIAnalysisResult {
   beardRecommendation: {
     style: string;
     trimAdvice: string;
+    beardPreset?: 'sculpted' | 'stubble' | 'full-trimmed' | 'goatee' | 'clean';
   };
   productAdvice: string[];
   technicalBarberNotes: string;
@@ -136,4 +169,47 @@ export interface AuditSecurityLog {
   isoStandard: 'ISO_27001_A.12.4' | 'OWASP_AUTH_FAIL' | 'OWASP_INJECTION_DEFENSE' | 'ISO_42010_ARCH';
   details: string;
   status: 'info' | 'warning' | 'success';
+}
+
+export type CurrencyCode = 'BOB' | 'USD' | 'EUR' | 'BRL' | 'ARS';
+
+export type ProductCategory = 'shampoo' | 'hair_cream' | 'beard_care' | 'body_care' | 'shaving' | 'combs' | 'shavers' | 'styling';
+
+export interface BarberProduct {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  categoryName: string;
+  priceBs: number; // Base price in Bolivianos (Bs)
+  rating: number;
+  reviewsCount: number;
+  stock: number;
+  description: string;
+  features: string[];
+  volumeOrSpecs: string; // e.g. "300 ml", "100 g", "Batería Li-Ion 120 min"
+  imageUrl: string;
+  badge?: string;
+  aiSuggestedFor?: string[]; // e.g. ['square', 'oval', 'dense_beard']
+}
+
+export interface CartItem {
+  product: BarberProduct;
+  quantity: number;
+}
+
+export interface ProductOrder {
+  id: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  items: CartItem[];
+  totalBs: number;
+  currencyUsed?: CurrencyCode;
+  exchangeRate?: number;
+  paymentMethod: 'qr_simple' | 'card' | 'cash_on_pickup';
+  qrReference?: string;
+  deliveryMethod: 'pickup_barberia' | 'delivery_express';
+  deliveryAddress?: string;
+  status: 'pending' | 'confirmed' | 'delivered';
+  createdAt: string;
 }

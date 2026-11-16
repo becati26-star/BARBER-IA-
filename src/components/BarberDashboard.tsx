@@ -184,7 +184,7 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
               <DollarSign className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-tech mt-2">
-              ${activeBarber.dailyStats.revenueToday} USD
+              {activeBarber.dailyStats.revenueToday} Bs
             </div>
             <div className="text-[10px] text-slate-400 font-mono mt-1">Comisión estimada: 60%</div>
           </div>
@@ -195,7 +195,7 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
               <Award className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-amber-400 font-tech mt-2">
-              ${activeBarber.dailyStats.tipsToday} USD
+              {activeBarber.dailyStats.tipsToday} Bs
             </div>
             <div className="text-[10px] text-slate-400 font-mono mt-1">100% para el barbero</div>
           </div>
@@ -264,7 +264,7 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
                     </div>
 
                     <div className="text-xs text-slate-300">
-                      Paquete: <strong className="text-cyan-300">{apt.packageName}</strong> (${apt.price} USD)
+                      Paquete: <strong className="text-cyan-300">{apt.packageName}</strong> ({apt.price} Bs)
                     </div>
 
                     {apt.aiSuggestedCut && (

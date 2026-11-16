@@ -132,9 +132,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <DollarSign className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-tech mt-2">
-              ${totalRevenue} USD
+              {totalRevenue} Bs
             </div>
-            <div className="text-[11px] text-slate-400 font-mono mt-1">Cifrado PCI-DSS verificado</div>
+            <div className="text-[11px] text-slate-400 font-mono mt-1">Liquidación en Bolivianos (QR/Tarjeta)</div>
           </div>
 
           <div className="p-5 rounded-2xl bg-[#090e1a] border border-cyan-500/30 shadow-lg">
@@ -280,7 +280,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-slate-200">{apt.packageName}</div>
-                        <div className="text-emerald-400 font-bold">${apt.price} USD</div>
+                        <div className="text-emerald-400 font-bold">{apt.price} Bs</div>
                       </td>
                       <td className="py-3 px-4 text-slate-300">{apt.barberName}</td>
                       <td className="py-3 px-4 text-slate-300">
@@ -388,11 +388,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                     <div>
                       <div className="text-slate-500">Facturación</div>
-                      <div className="font-bold text-emerald-400">${b.dailyStats.revenueToday}</div>
+                      <div className="font-bold text-emerald-400">{b.dailyStats.revenueToday} Bs</div>
                     </div>
                     <div>
                       <div className="text-slate-500">Propinas</div>
-                      <div className="font-bold text-amber-400">${b.dailyStats.tipsToday}</div>
+                      <div className="font-bold text-amber-400">{b.dailyStats.tipsToday} Bs</div>
                     </div>
                   </div>
                 </div>

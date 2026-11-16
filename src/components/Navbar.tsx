@@ -11,10 +11,11 @@ import {
   ChevronDown,
   Menu,
   X,
-  Lock
+  Lock,
+  ShoppingBag
 } from 'lucide-react';
-import { ClientProfile, BarberProfile, UserRole } from '../types';
-import { storeService, AppNotification } from '../services/store';
+import { ClientProfile, BarberProfile, UserRole, CurrencyCode } from '../types';
+import { storeService } from '../services/store';
 
 interface NavbarProps {
   userRole: UserRole | null;
@@ -27,6 +28,10 @@ interface NavbarProps {
   onLogout: () => void;
   currentView: 'home' | 'barber-dashboard' | 'admin-dashboard';
   onChangeView: (view: 'home' | 'barber-dashboard' | 'admin-dashboard') => void;
+  cartCount?: number;
+  onOpenCart?: () => void;
+  selectedCurrency?: CurrencyCode;
+  onCurrencyChange?: (currency: CurrencyCode) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -40,6 +45,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   currentView,
   onChangeView,
+  cartCount = 0,
+  onOpenCart,
+  selectedCurrency = 'BOB',
+  onCurrencyChange,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -113,6 +122,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               Galería IA
             </a>
             <a 
+              href="#productos" 
+              onClick={() => onChangeView('home')}
+              className="text-slate-300 hover:text-cyan-400 transition-colors flex items-center gap-1.5 font-semibold"
+            >
+              <ShoppingBag className="w-4 h-4 text-cyan-400" />
+              Tienda Bs
+            </a>
+            <a 
               href="#barberos" 
               onClick={() => onChangeView('home')}
               className="text-slate-300 hover:text-cyan-400 transition-colors"
@@ -173,6 +190,38 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Currency Switcher Compact */}
+            {onCurrencyChange && (
+              <select
+                value={selectedCurrency}
+                onChange={(e) => onCurrencyChange(e.target.value as CurrencyCode)}
+                title="Divisa de referencia"
+                className="bg-slate-900/90 border border-slate-700 text-cyan-300 font-mono text-xs font-bold rounded-xl px-2 py-2 focus:outline-none focus:border-cyan-400"
+              >
+                <option value="BOB">🇧🇴 Bs</option>
+                <option value="USD">🇺🇸 USD</option>
+                <option value="EUR">🇪🇺 EUR</option>
+                <option value="BRL">🇧🇷 BRL</option>
+                <option value="ARS">🇦🇷 ARS</option>
+              </select>
+            )}
+
+            {/* Persistent Shopping Cart Trigger */}
+            {onOpenCart && (
+              <button
+                onClick={onOpenCart}
+                className="relative p-2.5 rounded-xl bg-slate-900/80 border border-cyan-500/40 text-cyan-300 hover:text-white hover:border-cyan-400 transition-all"
+                title="Abrir Carrito de Compras"
+              >
+                <ShoppingBag className="w-5 h-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-cyan-400 text-slate-950 text-[10px] font-mono font-black rounded-full h-5 w-5 flex items-center justify-center shadow-md">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Quick Face ID Scanner Button */}
             <button
@@ -248,6 +297,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Mobile Menu Button */}
           <div className="flex lg:hidden items-center space-x-2">
+            {onOpenCart && (
+              <button
+                onClick={onOpenCart}
+                className="relative p-2 rounded-lg bg-slate-900 border border-cyan-500/40 text-cyan-300"
+                title="Carrito"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-cyan-400 text-slate-950 font-mono text-[9px] font-black rounded-full h-4 w-4 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            )}
             <button
               onClick={() => onOpenBooking()}
               className="px-3 py-1.5 bg-cyan-500 text-slate-950 font-bold rounded-lg text-xs"
@@ -279,7 +342,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => { onChangeView('home'); setMobileMenuOpen(false); }}
             className="block py-2 text-slate-300 hover:text-cyan-400 font-medium"
           >
-            Paquetes de Corte
+            Paquetes de Corte (Bs)
           </a>
           <a
             href="#estilos"
@@ -287,6 +350,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="block py-2 text-slate-300 hover:text-cyan-400 font-medium"
           >
             Galería IA Personalizada
+          </a>
+          <a
+            href="#productos"
+            onClick={() => { onChangeView('home'); setMobileMenuOpen(false); }}
+            className="block py-2 text-cyan-300 hover:text-cyan-400 font-bold"
+          >
+            Tienda de Productos (Bs)
           </a>
           <a
             href="#barberos"

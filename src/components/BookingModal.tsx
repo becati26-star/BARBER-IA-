@@ -13,11 +13,13 @@ import {
   ArrowLeft,
   Smartphone,
   Lock,
-  Download
+  QrCode,
+  AlertCircle
 } from 'lucide-react';
 import { BarberServicePackage, BarberProfile, ClientProfile, Appointment } from '../types';
 import { INITIAL_PACKAGES, storeService } from '../services/store';
 import { securityService } from '../services/security';
+import { PaymentQRCode } from './PaymentQRCode';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -59,10 +61,14 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [notes, setNotes] = useState<string>('');
 
   // Payment details
-  const [paymentMethod, setPaymentMethod] = useState<'credit_card' | 'apple_pay' | 'google_pay'>('credit_card');
+  const [paymentMethod, setPaymentMethod] = useState<'qr_simple' | 'credit_card' | 'apple_pay' | 'google_pay'>('qr_simple');
+  const [selectedBank, setSelectedBank] = useState<string>('SIMPLE');
+  const [qrReference] = useState<string>(`CITA-${Date.now().toString(36).toUpperCase().slice(-6)}`);
+  const [qrConfirmed, setQrConfirmed] = useState<boolean>(false);
   const [cardNumber, setCardNumber] = useState<string>('•••• •••• •••• 4242');
   const [cardExpiry, setCardExpiry] = useState<string>('12/28');
   const [cardCvc, setCardCvc] = useState<string>('•••');
+  const [formError, setFormError] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
 
@@ -93,8 +99,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   ];
 
   const handleProcessPayment = () => {
+    setFormError(null);
     if (!clientName || !clientEmail || !clientPhone) {
-      alert('Por favor completa todos tus datos de contacto.');
+      setFormError('Por favor completa todos tus datos de contacto.');
       return;
     }
 
@@ -166,7 +173,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </button>
         </div>
 
-        {/* Progress Step Indicator */}
+        {/* Step Indicator */}
         <div className="px-6 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs font-mono">
           <div className={`flex items-center gap-1.5 ${step >= 1 ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
             <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px]">1</span>
@@ -180,9 +187,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           <div className="h-px w-8 bg-slate-800"></div>
           <div className={`flex items-center gap-1.5 ${step >= 3 ? 'text-cyan-400 font-bold' : 'text-slate-500'}`}>
             <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px]">3</span>
-            <span>Pasarela de Pago</span>
+            <span>Pasarela / QR Bs</span>
           </div>
         </div>
+
+        {formError && (
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-red-950/60 border border-red-500/50 text-xs text-red-200 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <span>{formError}</span>
+          </div>
+        )}
 
         {/* Step 1: Package & Barber Selection */}
         {step === 1 && (
@@ -224,7 +238,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   >
                     <div className="flex justify-between items-start">
                       <div className="font-bold text-xs font-tech">{pkg.title}</div>
-                      <span className="text-xs font-mono font-bold text-cyan-400">${pkg.price}</span>
+                      <span className="text-xs font-mono font-bold text-cyan-400">{pkg.price} Bs</span>
                     </div>
                     <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-mono">
                       <Clock className="w-3 h-3 text-cyan-400" />
@@ -299,7 +313,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div className="text-[10px] text-slate-400 font-mono">Resumen de Turno:</div>
                 <div className="font-bold text-white font-tech text-sm mt-1">{selectedPackage.title}</div>
                 <div className="text-cyan-400 font-mono mt-0.5">Barbero: {selectedBarber.alias}</div>
-                <div className="text-slate-300 font-mono mt-1 font-bold">Total: ${selectedPackage.price} USD</div>
+                <div className="text-slate-300 font-mono mt-1 font-bold">Total: {selectedPackage.price} Bs</div>
               </div>
             </div>
 
@@ -375,8 +389,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
               <button
                 onClick={() => {
+                  setFormError(null);
                   if (!clientName || !clientEmail || !clientPhone) {
-                    alert('Por favor ingresa tu nombre, correo y teléfono.');
+                    setFormError('Por favor ingresa tu nombre, correo y teléfono.');
                     return;
                   }
                   setStep(3);
@@ -393,14 +408,27 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
         {/* Step 3: Payment Gateway */}
         {step === 3 && (
-          <div className="p-6 space-y-6">
+          <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
             
             {/* Payment Method Selector */}
             <div>
               <label className="block text-xs font-mono text-cyan-400 uppercase tracking-wider mb-2">
-                Selecciona la Pasarela de Pago
+                Selecciona la Pasarela de Pago (Bolivianos Bs)
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('qr_simple')}
+                  className={`p-3 rounded-xl border flex flex-col items-center justify-center text-xs font-bold transition-all ${
+                    paymentMethod === 'qr_simple'
+                      ? 'bg-cyan-950 border-cyan-400 text-white shadow-[0_0_15px_rgba(0,240,255,0.2)]'
+                      : 'bg-slate-900 border-slate-800 text-slate-400'
+                  }`}
+                >
+                  <QrCode className="w-5 h-5 text-cyan-400 mb-1" />
+                  <span>QR Simple</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('credit_card')}
@@ -411,7 +439,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   }`}
                 >
                   <CreditCard className="w-5 h-5 text-cyan-400 mb-1" />
-                  <span>Tarjeta Débito/Crédito</span>
+                  <span>Tarjeta</span>
                 </button>
 
                 <button
@@ -441,6 +469,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Scannable QR Simple Bolivia */}
+            {paymentMethod === 'qr_simple' && (
+              <PaymentQRCode
+                amountBs={selectedPackage.price}
+                concept={selectedPackage.title}
+                reference={qrReference}
+                selectedBank={selectedBank}
+                onBankChange={setSelectedBank}
+                qrConfirmed={qrConfirmed}
+                onSimulateScanConfirm={() => setQrConfirmed(true)}
+              />
+            )}
 
             {/* Credit Card Input Form Simulation */}
             {paymentMethod === 'credit_card' && (
@@ -484,13 +525,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <div className="text-xs text-cyan-400 font-mono">{selectedPackage.title}</div>
               </div>
               <div className="text-2xl font-black text-white font-tech">
-                ${selectedPackage.price}.00 USD
+                {selectedPackage.price} <span className="text-cyan-400">Bs</span>
               </div>
             </div>
 
             <div className="flex items-center space-x-2 text-[11px] text-emerald-400 font-mono">
               <Lock className="w-3.5 h-3.5" />
-              <span>Conexión cifrada TLS 1.3 con pasarela externa certificada PCI-DSS</span>
+              <span>Conexión cifrada TLS 1.3 con pasarela certificada (Bolivia & Internacional)</span>
             </div>
 
             <div className="flex justify-between items-center pt-3">
@@ -510,7 +551,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 {isProcessingPayment ? (
                   <span>Procesando Pago Seguro...</span>
                 ) : (
-                  <span>Pagar ${selectedPackage.price} & Confirmar Cita</span>
+                  <span>Pagar {selectedPackage.price} Bs & Confirmar Cita</span>
                 )}
               </button>
             </div>
@@ -561,7 +602,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
               <div className="flex justify-between border-t border-slate-800 pt-2">
                 <span className="text-slate-400">Estado de Pago:</span>
-                <span className="text-emerald-400 font-bold">PAGADO (${confirmedAppointment.price} USD)</span>
+                <span className="text-emerald-400 font-bold">PAGADO ({confirmedAppointment.price} Bs)</span>
               </div>
             </div>
 

@@ -3,9 +3,11 @@ import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { PackagesSection } from './components/PackagesSection';
 import { StyleGallery } from './components/StyleGallery';
+import { ProductsSection } from './components/ProductsSection';
 import { BarbersSection } from './components/BarbersSection';
 import { FaceScannerModal } from './components/FaceScannerModal';
 import { BookingModal } from './components/BookingModal';
+import { CartModal } from './components/CartModal';
 import { AuthModal } from './components/AuthModal';
 import { BarberDashboard } from './components/BarberDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -16,9 +18,10 @@ import {
   UserRole, 
   ClientProfile, 
   BarberProfile, 
-  BarberServicePackage 
+  BarberServicePackage,
+  CurrencyCode
 } from './types';
-import { storeService } from './services/store';
+import { INITIAL_PACKAGES, storeService } from './services/store';
 
 export default function App() {
   // Navigation & View state
@@ -28,6 +31,11 @@ export default function App() {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [activeClient, setActiveClient] = useState<ClientProfile | null>(null);
   const [activeBarber, setActiveBarber] = useState<BarberProfile | null>(null);
+
+  // Persistent Store & Currency State
+  const [cartCount, setCartCount] = useState<number>(() => storeService.getCartCount());
+  const [cartModalOpen, setCartModalOpen] = useState<boolean>(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>('BOB');
 
   // Modals state
   const [faceScannerOpen, setFaceScannerOpen] = useState<boolean>(false);
@@ -42,6 +50,10 @@ export default function App() {
   const [authModalInitialTab, setAuthModalInitialTab] = useState<'client' | 'barber' | 'admin' | 'register'>('client');
 
   const [securityModalOpen, setSecurityModalOpen] = useState<boolean>(false);
+
+  const refreshCartCount = () => {
+    setCartCount(storeService.getCartCount());
+  };
 
   // Handlers
   const handleOpenFaceScanner = (mode: 'analysis' | 'auth') => {
@@ -92,6 +104,13 @@ export default function App() {
     setActiveBarber(null);
   };
 
+  const handleSaveFaceProfile = (updatedClient: ClientProfile) => {
+    setActiveClient(updatedClient);
+    if (!userRole) {
+      setUserRole('client');
+    }
+  };
+
   const handleLogout = () => {
     setUserRole(null);
     setActiveClient(null);
@@ -114,6 +133,10 @@ export default function App() {
         onLogout={handleLogout}
         currentView={currentView}
         onChangeView={setCurrentView}
+        cartCount={cartCount}
+        onOpenCart={() => setCartModalOpen(true)}
+        selectedCurrency={selectedCurrency}
+        onCurrencyChange={setSelectedCurrency}
       />
 
       {/* Main View Switching */}
@@ -133,11 +156,20 @@ export default function App() {
               onOpenFaceScanner={() => handleOpenFaceScanner('analysis')}
             />
 
-            {/* Personalized Style Gallery */}
+            {/* Personalized Style Gallery & Technical Encyclopedia */}
             <StyleGallery
               activeClient={activeClient}
               onSelectStyleForBooking={(styleName) => handleOpenBooking(null, null, styleName)}
               onOpenFaceScanner={() => handleOpenFaceScanner('analysis')}
+            />
+
+            {/* Barbershop Products Store in Bolivianos (Bs) + Currency Converter */}
+            <ProductsSection
+              onOpenCart={() => setCartModalOpen(true)}
+              cartCount={cartCount}
+              selectedCurrency={selectedCurrency}
+              onCurrencyChange={setSelectedCurrency}
+              onCartUpdated={refreshCartCount}
             />
 
             {/* Master Barbers Section */}
@@ -174,19 +206,21 @@ export default function App() {
         onOpenBarberLogin={() => handleOpenAuth('barber')}
       />
 
-      {/* Interactive Modal 1: Face Scanner (Style Analysis & Face ID) */}
+      {/* Interactive Modal 1: Face Scanner (Style Analysis, Virtual Try-On & Face ID) */}
       <FaceScannerModal
         isOpen={faceScannerOpen}
         onClose={() => setFaceScannerOpen(false)}
         mode={faceScannerMode}
+        activeClient={activeClient}
         onStyleSelectedForBooking={(styleName, pkgId) => {
-          const pkg = pkgId ? storeService.getClients() && undefined : undefined;
+          const pkg = pkgId ? INITIAL_PACKAGES.find(p => p.id === pkgId) || null : null;
           handleOpenBooking(pkg, null, styleName);
         }}
         onFaceAuthenticated={handleFaceAuthenticated}
+        onSaveFaceProfile={handleSaveFaceProfile}
       />
 
-      {/* Interactive Modal 2: Multi-step Booking & Payment Engine */}
+      {/* Interactive Modal 2: Multi-step Booking & QR/Card Payment Engine */}
       <BookingModal
         isOpen={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
@@ -196,7 +230,17 @@ export default function App() {
         activeClient={activeClient}
       />
 
-      {/* Interactive Modal 3: Unified Multi-role Auth & Password Recovery */}
+      {/* Interactive Modal 3: Persistent Shopping Cart, Currency Converter & QR Payment */}
+      <CartModal
+        isOpen={cartModalOpen}
+        onClose={() => setCartModalOpen(false)}
+        activeClient={activeClient}
+        onCartUpdated={refreshCartCount}
+        selectedCurrency={selectedCurrency}
+        onCurrencyChange={setSelectedCurrency}
+      />
+
+      {/* Interactive Modal 4: Unified Multi-role Auth & Password Recovery */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -205,7 +249,7 @@ export default function App() {
         onOpenFaceIDScanner={() => handleOpenFaceScanner('auth')}
       />
 
-      {/* Interactive Modal 4: ISO 27001 / OWASP / ISO 42010 Compliance Center */}
+      {/* Interactive Modal 5: ISO 27001 / OWASP / ISO 42010 Compliance Center */}
       <SecurityComplianceModal
         isOpen={securityModalOpen}
         onClose={() => setSecurityModalOpen(false)}

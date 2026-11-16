@@ -16,18 +16,19 @@ export class AIService {
         body: JSON.stringify({ imageBase64 }),
       });
 
+      const result = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Error al conectar con el motor de IA`);
+        throw new Error(result.error || `HTTP ${response.status}: Error al conectar con el motor de IA`);
       }
 
-      const result = await response.json();
       if (!result.success || !result.data) {
         throw new Error(result.error || 'No se pudo generar el diagnóstico morfológico');
       }
 
       return {
         data: result.data,
-        engine: result.engine || 'Gemini 3.8 Flash',
+        engine: result.engine || 'Gemini 4 Hydrogen Vision',
       };
     } catch (error) {
       console.error('Error invoking AI facial analysis service:', error);
