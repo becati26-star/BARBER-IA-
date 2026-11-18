@@ -12,7 +12,8 @@ import {
   CutStyleItem,
   BarberProduct,
   CartItem,
-  ProductOrder
+  ProductOrder,
+  BarberReview
 } from '../types';
 import { securityService } from './security';
 
@@ -24,6 +25,7 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: 'barber_ia_notifications',
   CART: 'barber_ia_cart',
   ORDERS: 'barber_ia_orders',
+  REVIEWS: 'barber_ia_reviews',
 };
 
 export const INITIAL_BARBERS: BarberProfile[] = [
@@ -767,12 +769,16 @@ class StoreService {
 
       const savedOrders = localStorage.getItem(STORAGE_KEYS.ORDERS);
       this.orders = savedOrders ? JSON.parse(savedOrders) : [];
+
+      const savedReviews = localStorage.getItem(STORAGE_KEYS.REVIEWS);
+      this.reviews = savedReviews ? JSON.parse(savedReviews) : INITIAL_REVIEWS;
     } catch {
       this.appointments = INITIAL_APPOINTMENTS;
       this.barbers = INITIAL_BARBERS;
       this.clients = INITIAL_CLIENTS;
       this.cart = [];
       this.orders = [];
+      this.reviews = INITIAL_REVIEWS;
     }
   }
 
@@ -956,6 +962,7 @@ class StoreService {
   private products: BarberProduct[] = INITIAL_PRODUCTS;
   private cart: CartItem[] = [];
   private orders: ProductOrder[] = [];
+  private reviews: BarberReview[] = INITIAL_REVIEWS;
 
   public markAllNotificationsRead() {
     this.notifications.forEach(n => (n.read = true));
@@ -1078,7 +1085,83 @@ class StoreService {
 
     return newOrder;
   }
+
+  // --- Client Reviews ---
+  public getReviews(): BarberReview[] {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.REVIEWS);
+      if (saved) this.reviews = JSON.parse(saved);
+    } catch {}
+    return [...this.reviews];
+  }
+
+  public addReview(reviewData: Omit<BarberReview, 'id' | 'createdAt'>): BarberReview {
+    const newReview: BarberReview = {
+      ...reviewData,
+      id: `rev-${Date.now()}-${Math.floor(Math.random() * 900 + 100)}`,
+      createdAt: new Date().toISOString(),
+    };
+    this.reviews.unshift(newReview);
+    try {
+      localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(this.reviews));
+    } catch {}
+
+    this.addNotification({
+      title: 'Nueva Reseña en BARBER IA',
+      message: `${newReview.clientName} calificó con ${newReview.rating}★ el servicio "${newReview.serviceName}".`,
+      type: 'booking',
+    });
+
+    securityService.logEvent(
+      'APPOINTMENT_CREATE',
+      newReview.clientName,
+      'ISO_27001_A.12.4',
+      `Reseña de cliente publicada (${newReview.rating}/5 estrellas) sobre ${newReview.barberName}`
+    );
+
+    return newReview;
+  }
+
+  public getAverageReviewRating(): number {
+    const list = this.getReviews();
+    if (list.length === 0) return 5.0;
+    const sum = list.reduce((acc, r) => acc + r.rating, 0);
+    return Math.round((sum / list.length) * 10) / 10;
+  }
 }
+
+export const INITIAL_REVIEWS: BarberReview[] = [
+  {
+    id: 'rev-1',
+    clientName: 'Lucas Ramírez',
+    barberName: 'Alex Silva (Cyber)',
+    serviceName: 'Fade Holográfico + Barba VIP IA',
+    rating: 5,
+    comment: 'El escaneo facial me recomendó el Low Skin Fade y me quedó exacto. Excelente ambiente y atención puntual.',
+    verifiedVisit: true,
+    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
+  },
+  {
+    id: 'rev-2',
+    clientName: 'Juan Pablo Torres',
+    barberName: 'Carlos Mendoza (Blade)',
+    serviceName: 'Corte Cyber Precision',
+    rating: 5,
+    comment: 'Muy fácil llegar siguiendo la ruta desde el centro. Compré además la crema de barba y el degradado quedó impecable.',
+    verifiedVisit: true,
+    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+  {
+    id: 'rev-3',
+    clientName: 'Sebastián Morales',
+    barberName: 'Mateo Rossi (Fade Master)',
+    serviceName: 'Transformación Total Color IA',
+    rating: 5,
+    comment: 'Probé el tono platino antes en la cámara con el simulador y el resultado en silla fue idéntico. Recomendadísimo.',
+    verifiedVisit: true,
+    createdAt: new Date(Date.now() - 86400000 * 9).toISOString(),
+  },
+];
 
 export const storeService = new StoreService();
 

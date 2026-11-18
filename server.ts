@@ -30,9 +30,72 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: 'BARBER IA Backend Engine',
     geminiConfigured: !!apiKey,
+    mapsConfigured: !!(process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY),
+    whatsappCloudConfigured: !!(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID),
     standards: ['ISO-27001', 'OWASP-ASVS', 'ISO-42010'],
     timestamp: new Date().toISOString(),
   });
+});
+
+// Runtime Maps JS SDK key loader (for browser Maps JavaScript API provider)
+app.get('/api/maps/config', (req, res) => {
+  const mapsKey = process.env.VITE_GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '';
+  res.json({
+    apiKey: mapsKey,
+    configured: !!mapsKey,
+  });
+});
+
+// WhatsApp Appointment Reminder Endpoint (Meta WhatsApp Cloud API if configured, else Click-to-Chat link)
+app.post('/api/whatsapp/send-reminder', async (req, res) => {
+  try {
+    const { phone, message } = req.body || {};
+    const cleanPhone = String(phone || '').replace(/\D/g, '');
+    const cleanMessage = String(message || '').trim();
+
+    if (!cleanPhone || !cleanMessage) {
+      return res.status(400).json({ error: 'Número de WhatsApp y mensaje son obligatorios.' });
+    }
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(cleanMessage)}`;
+    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+    if (accessToken && phoneNumberId) {
+      const apiResp = await fetch(`https://graph.facebook.com/v21.0/${phoneNumberId}/messages`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: cleanPhone,
+          type: 'text',
+          text: { body: cleanMessage },
+        }),
+      });
+
+      if (apiResp.ok) {
+        return res.json({
+          success: true,
+          mode: 'cloud_api',
+          whatsappUrl,
+          detail: 'Mensaje enviado automáticamente vía WhatsApp Cloud API.',
+        });
+      }
+    }
+
+    return res.json({
+      success: true,
+      mode: 'click_to_chat',
+      whatsappUrl,
+      detail: 'Enlace directo de WhatsApp listo para enviar al cliente.',
+    });
+  } catch (err: any) {
+    console.error('Error in /api/whatsapp/send-reminder:', err);
+    return res.status(500).json({ error: 'Error preparando recordatorio por WhatsApp.' });
+  }
 });
 
 // Helper to normalize incoming base64 data URL or remote HTTP(S) image into inlineData parts

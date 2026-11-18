@@ -14,12 +14,23 @@ import {
   Smartphone,
   Lock,
   QrCode,
-  AlertCircle
+  AlertCircle,
+  MessageCircle,
+  Copy,
+  Check,
+  ExternalLink
 } from 'lucide-react';
 import { BarberServicePackage, BarberProfile, ClientProfile, Appointment } from '../types';
 import { INITIAL_PACKAGES, storeService } from '../services/store';
 import { securityService } from '../services/security';
 import { PaymentQRCode } from './PaymentQRCode';
+import {
+  buildAppointmentReminderMessage,
+  dispatchWhatsAppReminder,
+  formatWhatsAppDisplay,
+  getWhatsAppChatUrl,
+  WhatsAppDispatchResponse,
+} from '../services/whatsapp';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -58,6 +69,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [clientEmail, setClientEmail] = useState<string>(activeClient?.email || '');
   const [clientPhone, setClientPhone] = useState<string>(activeClient?.phone || '');
   const [suggestedStyle, setSuggestedStyle] = useState<string>(preselectedStyleName || '');
+  const [fadeOrLengthSpec, setFadeOrLengthSpec] = useState<string>('Mid Skin Fade (#0.5 a #2)');
+  const [beardSpec, setBeardSpec] = useState<string>('Perfilado con navaja y toalla caliente');
+  const [whatsappOptIn, setWhatsappOptIn] = useState<boolean>(true);
   const [notes, setNotes] = useState<string>('');
 
   // Payment details
@@ -71,6 +85,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState<boolean>(false);
   const [confirmedAppointment, setConfirmedAppointment] = useState<Appointment | null>(null);
+  const [whatsappDispatch, setWhatsappDispatch] = useState<WhatsAppDispatchResponse | null>(null);
+  const [copiedWaText, setCopiedWaText] = useState<boolean>(false);
 
   useEffect(() => {
     if (preselectedPackage) setSelectedPackage(preselectedPackage);
@@ -108,9 +124,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setIsProcessingPayment(true);
 
     // Simulate PCI-DSS secure tokenization with payment gateway
-    setTimeout(() => {
+    setTimeout(async () => {
       const sanitizedName = securityService.sanitizeInput(clientName);
       const sanitizedNotes = securityService.sanitizeInput(notes);
+      const sanitizedStyle = securityService.sanitizeInput(suggestedStyle);
 
       const newApt = storeService.addAppointment({
         clientName: sanitizedName,
@@ -127,19 +144,42 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         status: 'confirmed',
         paymentStatus: 'paid',
         paymentMethod: paymentMethod,
-        aiSuggestedCut: suggestedStyle || undefined,
+        aiSuggestedCut: sanitizedStyle || undefined,
+        fadeOrLengthSpec: fadeOrLengthSpec || undefined,
+        beardSpec: beardSpec || undefined,
+        whatsappOptIn,
         notes: sanitizedNotes,
       });
 
       setConfirmedAppointment(newApt);
+      if (whatsappOptIn) {
+        const dispatchRes = await dispatchWhatsAppReminder(newApt, false);
+        setWhatsappDispatch(dispatchRes);
+      }
       setIsProcessingPayment(false);
       setStep(4); // Confirmation step
-    }, 1500);
+    }, 1200);
+  };
+
+  const handleCopyWhatsAppMessage = async () => {
+    if (!confirmedAppointment) return;
+    const msg =
+      whatsappDispatch?.message ||
+      buildAppointmentReminderMessage(confirmedAppointment, { isReminder: false });
+    try {
+      await navigator.clipboard.writeText(msg);
+      setCopiedWaText(true);
+      setTimeout(() => setCopiedWaText(false), 2500);
+    } catch {
+      // Ignore clipboard failure in restricted iframes
+    }
   };
 
   const handleResetAndClose = () => {
     setStep(1);
     setConfirmedAppointment(null);
+    setWhatsappDispatch(null);
+    setCopiedWaText(false);
     onClose();
   };
 
@@ -340,10 +380,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
 
-            {/* Client Contact Info */}
+            {/* Client Contact Info & Haircut Specifications */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
-              <div className="text-xs font-mono text-cyan-400 uppercase tracking-wider">
-                Datos del Cliente
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-mono text-cyan-400 uppercase tracking-wider">
+                  Datos del Cliente & WhatsApp
+                </div>
+                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                  <MessageCircle className="w-3 h-3" />
+                  Recordatorio automático
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <input
@@ -362,20 +408,71 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 />
                 <input
                   type="tel"
-                  placeholder="Teléfono / WhatsApp"
+                  placeholder="WhatsApp (ej: +591 77889900)"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
-                  className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  className="p-2.5 bg-slate-900 border border-emerald-500/40 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-400"
                 />
               </div>
 
-              <input
-                type="text"
-                placeholder="Notas adicionales para el barbero (opcional)"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-              />
+              {/* Haircut Specifications for WhatsApp Reminder & Barber */}
+              <div className="pt-2 space-y-2.5">
+                <div className="text-xs font-mono text-cyan-400 uppercase tracking-wider">
+                  Especificaciones de tu Corte (se incluirán en tu recordatorio WhatsApp)
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  <input
+                    type="text"
+                    placeholder="Corte deseado (ej: Taper Fade, Mullet)"
+                    value={suggestedStyle}
+                    onChange={(e) => setSuggestedStyle(e.target.value)}
+                    className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  />
+                  <select
+                    value={fadeOrLengthSpec}
+                    onChange={(e) => setFadeOrLengthSpec(e.target.value)}
+                    className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="Low Skin Fade (#0 a #1.5)">Low Skin Fade (#0 a #1.5)</option>
+                    <option value="Mid Skin Fade (#0.5 a #2)">Mid Skin Fade (#0.5 a #2)</option>
+                    <option value="High Fade con textura arriba">High Fade con textura arriba</option>
+                    <option value="Corte clásico a tijera">Corte clásico a tijera</option>
+                    <option value="Buzz Cut uniforme (#2)">Buzz Cut uniforme (#2)</option>
+                    <option value="Dejar recomendaciones al barbero IA">Asesoría del barbero IA</option>
+                  </select>
+                  <select
+                    value={beardSpec}
+                    onChange={(e) => setBeardSpec(e.target.value)}
+                    className="p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="Perfilado con navaja y toalla caliente">Barba: Perfilado con navaja</option>
+                    <option value="Barba completa degradada">Barba: Completa degradada</option>
+                    <option value="Rebaje barba corta (3 mm)">Barba: Rebaje corto (3 mm)</option>
+                    <option value="Afeitado completo al ras">Barba: Afeitado completo</option>
+                    <option value="Solo cabello (sin servicio de barba)">Sin servicio de barba</option>
+                  </select>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Otras indicaciones (ej: mantener largo arriba, diseño de cejas, alergias...)"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                />
+
+                <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none pt-1">
+                  <input
+                    type="checkbox"
+                    checked={whatsappOptIn}
+                    onChange={(e) => setWhatsappOptIn(e.target.checked)}
+                    className="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500"
+                  />
+                  <span>
+                    Enviar recordatorio de mi cita y especificaciones del corte a mi número de WhatsApp
+                  </span>
+                </label>
+              </div>
             </div>
 
             <div className="flex justify-between items-center pt-3">
@@ -559,64 +656,137 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           </div>
         )}
 
-        {/* Step 4: Booking & Payment Confirmation */}
-        {step === 4 && confirmedAppointment && (
-          <div className="p-8 text-center space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center mx-auto text-cyan-400 shadow-[0_0_30px_rgba(0,240,255,0.4)]">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
+        {/* Step 4: Booking & Payment Confirmation + WhatsApp Reminder */}
+        {step === 4 && confirmedAppointment && (() => {
+          const waMessage =
+            whatsappDispatch?.message ||
+            buildAppointmentReminderMessage(confirmedAppointment, { isReminder: false });
+          const waUrl =
+            whatsappDispatch?.whatsappUrl ||
+            getWhatsAppChatUrl(confirmedAppointment.clientPhone, waMessage);
+          const formattedPhone = formatWhatsAppDisplay(confirmedAppointment.clientPhone);
 
-            <div>
-              <span className="text-xs font-mono bg-cyan-950 text-cyan-300 border border-cyan-500/50 px-3 py-1 rounded-full font-bold uppercase">
-                ¡Turno Confirmado con Éxito!
-              </span>
-              <h3 className="text-2xl font-black text-white font-tech mt-3">
-                Cita Agendada en BARBER IA
-              </h3>
-              <p className="text-xs text-slate-300 mt-1 max-w-sm mx-auto">
-                Hemos enviado la confirmación y recordatorio push a tu dispositivo y correo.
-              </p>
-            </div>
+          return (
+            <div className="p-6 sm:p-7 text-center space-y-5 max-h-[82vh] overflow-y-auto">
+              <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 border-2 border-cyan-400 flex items-center justify-center mx-auto text-cyan-400 shadow-[0_0_25px_rgba(0,240,255,0.35)]">
+                <CheckCircle2 className="w-7 h-7" />
+              </div>
 
-            {/* Appointment Ticket */}
-            <div className="max-w-md mx-auto p-4 rounded-xl bg-slate-950 border border-cyan-500/40 text-left font-mono text-xs space-y-2">
-              <div className="flex justify-between border-b border-slate-800 pb-2">
-                <span className="text-slate-400">Token de Cita:</span>
-                <span className="text-cyan-400 font-bold">{confirmedAppointment.id}</span>
+              <div>
+                <h3 className="text-2xl font-black text-white font-tech">
+                  Cita Agendada en BARBER IA
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto">
+                  Tu turno fue confirmado y tu recordatorio personalizado con las especificaciones del corte está listo para WhatsApp.
+                </p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Cliente:</span>
-                <span className="text-white font-bold">{confirmedAppointment.clientName}</span>
+
+              {/* Appointment Ticket */}
+              <div className="max-w-lg mx-auto p-4 rounded-xl bg-slate-950 border border-cyan-500/40 text-left font-mono text-xs space-y-2">
+                <div className="flex justify-between border-b border-slate-800 pb-2">
+                  <span className="text-slate-400">Token de Cita:</span>
+                  <span className="text-cyan-400 font-bold">{confirmedAppointment.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Cliente / WhatsApp:</span>
+                  <span className="text-white font-bold">
+                    {confirmedAppointment.clientName} ({formattedPhone})
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Paquete:</span>
+                  <span className="text-white font-bold">{confirmedAppointment.packageName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Barbero Asignado:</span>
+                  <span className="text-cyan-300">{confirmedAppointment.barberName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Fecha & Hora:</span>
+                  <span className="text-white font-bold">
+                    {confirmedAppointment.date} a las {confirmedAppointment.time} hs
+                  </span>
+                </div>
+                {(confirmedAppointment.aiSuggestedCut || confirmedAppointment.fadeOrLengthSpec || confirmedAppointment.beardSpec) && (
+                  <div className="pt-2 border-t border-slate-800 space-y-1 text-[11px]">
+                    <div className="text-cyan-400 font-bold">Especificaciones del Corte:</div>
+                    {confirmedAppointment.aiSuggestedCut && (
+                      <div className="text-slate-200">• Estilo: {confirmedAppointment.aiSuggestedCut}</div>
+                    )}
+                    {confirmedAppointment.fadeOrLengthSpec && (
+                      <div className="text-slate-200">• Degradado/Largo: {confirmedAppointment.fadeOrLengthSpec}</div>
+                    )}
+                    {confirmedAppointment.beardSpec && (
+                      <div className="text-slate-200">• Barba: {confirmedAppointment.beardSpec}</div>
+                    )}
+                    {confirmedAppointment.notes && (
+                      <div className="text-slate-300">• Notas: {confirmedAppointment.notes}</div>
+                    )}
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-slate-800 pt-2">
+                  <span className="text-slate-400">Estado de Pago:</span>
+                  <span className="text-emerald-400 font-bold">PAGADO ({confirmedAppointment.price} Bs)</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Paquete:</span>
-                <span className="text-white font-bold">{confirmedAppointment.packageName}</span>
+
+              {/* WhatsApp Reminder Box */}
+              <div className="max-w-lg mx-auto p-4 rounded-xl bg-emerald-950/30 border border-emerald-500/40 text-left space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-emerald-300 font-bold text-xs">
+                    <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>
+                      {whatsappDispatch?.mode === 'cloud_api'
+                        ? `Recordatorio enviado automáticamente a ${formattedPhone}`
+                        : `Recordatorio de WhatsApp listo para ${formattedPhone}`}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyWhatsAppMessage}
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 hover:border-emerald-400 text-slate-200 text-[11px] font-semibold flex items-center gap-1 transition-colors shrink-0"
+                  >
+                    {copiedWaText ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Copiado</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copiar</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <pre className="p-3 rounded-lg bg-slate-950/90 border border-slate-800 text-[11px] text-slate-300 whitespace-pre-wrap font-sans leading-relaxed max-h-36 overflow-y-auto">
+                  {waMessage}
+                </pre>
+
+                <a
+                  href={waUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-colors shadow-lg"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Abrir WhatsApp y Enviar Recordatorio</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Barbero Asignado:</span>
-                <span className="text-cyan-300">{confirmedAppointment.barberName}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Fecha & Hora:</span>
-                <span className="text-white font-bold">{confirmedAppointment.date} a las {confirmedAppointment.time} hs</span>
-              </div>
-              <div className="flex justify-between border-t border-slate-800 pt-2">
-                <span className="text-slate-400">Estado de Pago:</span>
-                <span className="text-emerald-400 font-bold">PAGADO ({confirmedAppointment.price} Bs)</span>
+
+              <div className="flex justify-center pt-1">
+                <button
+                  onClick={handleResetAndClose}
+                  className="px-6 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-cyan-400 text-slate-200 hover:text-white font-bold text-xs uppercase tracking-wider transition-all"
+                >
+                  Finalizar & Volver al Inicio
+                </button>
               </div>
             </div>
-
-            <div className="flex justify-center space-x-3 pt-2">
-              <button
-                onClick={handleResetAndClose}
-                className="px-6 py-3 rounded-xl bg-cyan-500 text-slate-950 font-black text-xs uppercase tracking-wider transition-all shadow-md"
-              >
-                Finalizar & Volver al Inicio
-              </button>
-            </div>
-
-          </div>
-        )}
+          );
+        })()}
 
       </div>
     </div>

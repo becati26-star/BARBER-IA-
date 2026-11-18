@@ -56,6 +56,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isRecoveringPassword, setIsRecoveringPassword] = useState<boolean>(false);
   const [recoveryEmail, setRecoveryEmail] = useState<string>('');
   const [recoverySent, setRecoverySent] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const handleClientLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,8 +78,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regName || !regEmail || !regPhone) {
-      alert('Por favor completa todos los campos de registro.');
+    setAuthError(null);
+    if (!regName.trim() || !regEmail.trim() || !regPhone.trim()) {
+      setAuthError('Por favor completa nombre, correo y número de WhatsApp.');
       return;
     }
 
@@ -109,8 +111,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handlePasswordRecovery = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryEmail) {
-      alert('Por favor ingresa tu correo electrónico.');
+    setAuthError(null);
+    if (!recoveryEmail.trim()) {
+      setAuthError('Por favor ingresa tu correo electrónico.');
       return;
     }
     setRecoverySent(true);
@@ -340,15 +343,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500 mt-1"
                     />
                   </div>
+                  {authError && (
+                    <div className="p-2.5 rounded-xl bg-red-950/60 border border-red-500/40 text-xs text-red-200">
+                      {authError}
+                    </div>
+                  )}
                   <div>
-                    <label className="text-[10px] font-mono text-slate-400 uppercase">Teléfono / Celular</label>
+                    <label className="text-[10px] font-mono text-emerald-400 uppercase">
+                      Número de WhatsApp (para recordatorios de citas)
+                    </label>
                     <input
                       type="tel"
                       required
-                      placeholder="+54 9 11 1234-5678"
+                      placeholder="+591 7788-9900"
                       value={regPhone}
                       onChange={(e) => setRegPhone(e.target.value)}
-                      className="w-full p-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-cyan-500 mt-1"
+                      className="w-full p-2.5 bg-slate-900 border border-emerald-500/40 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-400 mt-1"
                     />
                   </div>
                   <div>

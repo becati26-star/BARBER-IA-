@@ -86,6 +86,10 @@ export interface Appointment {
   paymentMethod?: 'qr_simple' | 'credit_card' | 'apple_pay' | 'google_pay' | 'crypto' | 'cash';
   notes?: string;
   aiSuggestedCut?: string;
+  fadeOrLengthSpec?: string;
+  beardSpec?: string;
+  whatsappOptIn?: boolean;
+  whatsappReminderSentAt?: string;
   createdAt: string;
 }
 
@@ -211,5 +215,16 @@ export interface ProductOrder {
   deliveryMethod: 'pickup_barberia' | 'delivery_express';
   deliveryAddress?: string;
   status: 'pending' | 'confirmed' | 'delivered';
+  createdAt: string;
+}
+
+export interface BarberReview {
+  id: string;
+  clientName: string;
+  barberName: string;
+  serviceName: string;
+  rating: number; // 1 to 5
+  comment: string;
+  verifiedVisit: boolean;
   createdAt: string;
 }

@@ -98,6 +98,11 @@ export const Footer: React.FC<FooterProps> = ({
                 </a>
               </li>
               <li>
+                <a href="#nosotros" className="hover:text-cyan-400 transition-colors">
+                  Misión, Visión & Institucional
+                </a>
+              </li>
+              <li>
                 <button onClick={onOpenFaceScanner} className="hover:text-cyan-400 transition-colors text-left">
                   Escáner Facial Biométrico
                 </button>
@@ -118,7 +123,7 @@ export const Footer: React.FC<FooterProps> = ({
             <ul className="space-y-2 text-xs text-slate-400">
               <li className="flex items-start space-x-2">
                 <MapPin className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
-                <span>Distrito Cyber, Av. Tecnológica 2049, Piso 1</span>
+                <span>Av. San Martín #450, Equipetrol, Santa Cruz de la Sierra</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Clock className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -130,7 +135,16 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
               <li className="flex items-center space-x-2">
                 <Phone className="w-4 h-4 text-cyan-400 shrink-0" />
-                <span>+54 9 11 8844-9900</span>
+                <span>+591 7788-9900</span>
+              </li>
+              <li className="pt-1">
+                <a
+                  href="#contacto"
+                  className="inline-flex items-center gap-1.5 text-cyan-400 hover:text-cyan-300 font-bold hover:underline"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Ver Mapa, Ruta Más Rápida y Reseñas</span>
+                </a>
               </li>
             </ul>
           </div>

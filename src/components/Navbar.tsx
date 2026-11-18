@@ -136,6 +136,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               Staff Master
             </a>
+            <a 
+              href="#nosotros" 
+              onClick={() => onChangeView('home')}
+              className="text-slate-300 hover:text-cyan-400 transition-colors"
+            >
+              Institucional
+            </a>
+            <a 
+              href="#contacto" 
+              onClick={() => onChangeView('home')}
+              className="text-slate-300 hover:text-cyan-400 transition-colors"
+            >
+              Ubicación & Reseñas
+            </a>
             <button
               onClick={onOpenSecurity}
               className="text-slate-300 hover:text-cyan-400 transition-colors flex items-center gap-1.5 text-xs bg-slate-900/60 border border-slate-700/60 px-2.5 py-1 rounded-md"
@@ -364,6 +378,20 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="block py-2 text-slate-300 hover:text-cyan-400 font-medium"
           >
             Staff de Barberos
+          </a>
+          <a
+            href="#nosotros"
+            onClick={() => { onChangeView('home'); setMobileMenuOpen(false); }}
+            className="block py-2 text-slate-300 hover:text-cyan-400 font-medium"
+          >
+            Identidad Institucional (Misión, Visión y Objetivos)
+          </a>
+          <a
+            href="#contacto"
+            onClick={() => { onChangeView('home'); setMobileMenuOpen(false); }}
+            className="block py-2 text-slate-300 hover:text-cyan-400 font-medium"
+          >
+            Ubicación, Rutas & Reseñas
           </a>
           <button
             onClick={() => { onOpenSecurity(); setMobileMenuOpen(false); }}

@@ -14,10 +14,17 @@ import {
   Award,
   ArrowLeft,
   Eye,
-  RefreshCw
+  RefreshCw,
+  MessageCircle,
+  ExternalLink
 } from 'lucide-react';
 import { BarberProfile, Appointment } from '../types';
 import { storeService } from '../services/store';
+import {
+  buildAppointmentReminderMessage,
+  formatWhatsAppDisplay,
+  getWhatsAppChatUrl,
+} from '../services/whatsapp';
 
 interface BarberDashboardProps {
   barber: BarberProfile;
@@ -34,6 +41,7 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
 
   const [appointments, setAppointments] = useState<Appointment[]>(storeService.getAppointments());
   const [selectedClientApt, setSelectedClientApt] = useState<Appointment | null>(null);
+  const [reminderFeedback, setReminderFeedback] = useState<string | null>(null);
 
   // Filter appointments for active barber
   const barberAppointments = appointments.filter(a => a.barberId === activeBarber.id);
@@ -56,13 +64,16 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
     setAppointments(storeService.getAppointments());
   };
 
-  const handleSendClientReminder = (apt: Appointment) => {
+  const handleLogWhatsAppReminder = (apt: Appointment) => {
     storeService.addNotification({
-      title: 'Recordatorio Enviado al Cliente',
-      message: `Se notificó a ${apt.clientName} sobre su turno a las ${apt.time} hs con ${activeBarber.alias}.`,
+      title: 'Recordatorio WhatsApp Enviado',
+      message: `Se preparó recordatorio por WhatsApp a ${apt.clientName} (${formatWhatsAppDisplay(apt.clientPhone)}) para las ${apt.time} hs con ${activeBarber.alias}.`,
       type: 'reminder',
     });
-    alert(`Recordatorio push enviado con éxito a ${apt.clientName} (${apt.clientPhone})`);
+    setReminderFeedback(
+      `Recordatorio WhatsApp abierto para ${apt.clientName} (${formatWhatsAppDisplay(apt.clientPhone)}).`
+    );
+    setTimeout(() => setReminderFeedback(null), 4000);
   };
 
   return (
@@ -233,6 +244,13 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
             </button>
           </div>
 
+          {reminderFeedback && (
+            <div className="mb-4 p-3 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-xs text-emerald-300 flex items-center gap-2">
+              <MessageCircle className="w-4 h-4 shrink-0 text-emerald-400" />
+              <span>{reminderFeedback}</span>
+            </div>
+          )}
+
           {barberAppointments.length === 0 ? (
             <div className="text-center py-12 text-slate-500 font-mono text-xs">
               No hay turnos pendientes para este barbero hoy.
@@ -286,14 +304,21 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
                       <span>Ficha IA</span>
                     </button>
 
-                    {/* Push reminder */}
-                    <button
-                      onClick={() => handleSendClientReminder(apt)}
-                      className="p-2 rounded-lg bg-slate-950 border border-slate-700 hover:border-cyan-400 text-slate-300 hover:text-white transition-colors"
-                      title="Enviar recordatorio push al cliente"
+                    {/* WhatsApp Reminder Link */}
+                    <a
+                      href={getWhatsAppChatUrl(
+                        apt.clientPhone,
+                        buildAppointmentReminderMessage(apt, { isReminder: true })
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => handleLogWhatsAppReminder(apt)}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-950/70 border border-emerald-500/50 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 text-xs font-bold flex items-center space-x-1.5 transition-colors"
+                      title={`Enviar recordatorio por WhatsApp a ${formatWhatsAppDisplay(apt.clientPhone)}`}
                     >
-                      <Bell className="w-3.5 h-3.5" />
-                    </button>
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </a>
 
                     {/* Status change actions */}
                     {apt.status === 'confirmed' && (
@@ -353,24 +378,38 @@ export const BarberDashboard: React.FC<BarberDashboardProps> = ({
                   </div>
                 </div>
 
-                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                  <div className="text-slate-400">Notas del Cliente:</div>
-                  <div className="text-slate-200 mt-1">
-                    {selectedClientApt.notes || 'Sin especificaciones previas registradas.'}
+                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+                  <div className="text-slate-400">Especificaciones y Notas del Cliente:</div>
+                  {selectedClientApt.fadeOrLengthSpec && (
+                    <div className="text-cyan-300">• Degradado / Largo: {selectedClientApt.fadeOrLengthSpec}</div>
+                  )}
+                  {selectedClientApt.beardSpec && (
+                    <div className="text-cyan-300">• Barba: {selectedClientApt.beardSpec}</div>
+                  )}
+                  <div className="text-slate-200">
+                    • Notas: {selectedClientApt.notes || 'Sin especificaciones adicionales.'}
                   </div>
-                </div>
-
-                <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                  <div className="text-slate-400">Parámetros Técnicos de Ejecución:</div>
-                  <div className="text-cyan-300 mt-1">
-                    • Degradado milimétrico en parietales con guía #1.<br />
-                    • Perfilado de barba a 45° con toalla caliente infusionada.<br />
-                    • Cera mate fijación alta sin brillo artificial.
+                  <div className="text-emerald-400 pt-1">
+                    WhatsApp registrado: {formatWhatsAppDisplay(selectedClientApt.clientPhone)}
                   </div>
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
+                <a
+                  href={getWhatsAppChatUrl(
+                    selectedClientApt.clientPhone,
+                    buildAppointmentReminderMessage(selectedClientApt, { isReminder: true })
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => handleLogWhatsAppReminder(selectedClientApt)}
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-colors"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Enviar Recordatorio WhatsApp</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
                 <button
                   onClick={() => setSelectedClientApt(null)}
                   className="px-4 py-2 bg-cyan-500 text-slate-950 font-bold rounded-lg text-xs"

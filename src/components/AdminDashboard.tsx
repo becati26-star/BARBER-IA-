@@ -16,10 +16,16 @@ import {
   Key,
   Database,
   Cpu,
-  Fingerprint
+  Fingerprint,
+  MessageCircle
 } from 'lucide-react';
 import { storeService } from '../services/store';
 import { securityService } from '../services/security';
+import {
+  buildAppointmentReminderMessage,
+  formatWhatsAppDisplay,
+  getWhatsAppChatUrl,
+} from '../services/whatsapp';
 import { Appointment, ClientProfile, BarberProfile, AuditSecurityLog } from '../types';
 
 interface AdminDashboardProps {
@@ -297,14 +303,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        {apt.status !== 'cancelled' && (
-                          <button
-                            onClick={() => handleCancelAppointment(apt.id)}
-                            className="text-[10px] text-red-400 hover:text-red-300 hover:underline"
-                          >
-                            Cancelar
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {apt.status !== 'cancelled' && (
+                            <a
+                              href={getWhatsAppChatUrl(
+                                apt.clientPhone,
+                                buildAppointmentReminderMessage(apt, { isReminder: true })
+                              )}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-500 hover:text-slate-950 text-[10px] font-bold transition-colors"
+                              title={`Recordatorio WhatsApp a ${formatWhatsAppDisplay(apt.clientPhone)}`}
+                            >
+                              <MessageCircle className="w-3 h-3" />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+                          {apt.status !== 'cancelled' && (
+                            <button
+                              onClick={() => handleCancelAppointment(apt.id)}
+                              className="text-[10px] text-red-400 hover:text-red-300 hover:underline"
+                            >
+                              Cancelar
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -356,6 +379,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       ) : (
                         <span className="text-[10px] text-slate-500">No registrada</span>
                       )}
+                    </div>
+                    <div className="flex justify-between items-center pt-1 border-t border-slate-800">
+                      <span className="text-slate-500">WhatsApp:</span>
+                      <a
+                        href={getWhatsAppChatUrl(
+                          client.phone,
+                          `Hola ${client.name}, te escribimos desde BARBER IA para coordinar tu próxima cita de corte de cabello.`
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1"
+                      >
+                        <MessageCircle className="w-3 h-3" />
+                        <span>{formatWhatsAppDisplay(client.phone)}</span>
+                      </a>
                     </div>
                   </div>
                 </div>
